@@ -77,6 +77,7 @@
             this.btnOpenCloseSCom.TabIndex = 0;
             this.btnOpenCloseSCom.Text = "打开通信";
             this.btnOpenCloseSCom.UseVisualStyleBackColor = true;
+            this.btnOpenCloseSCom.Click += new System.EventHandler(this.btnOpenCloseSCom_Click);
             // 
             // cbSerial
             // 
@@ -88,13 +89,13 @@
             // 
             // cbBaudRate
             // 
-            this.cbBaudRate.AutoCompleteCustomSource.AddRange(new string[] {
+            this.cbBaudRate.FormattingEnabled = true;
+            this.cbBaudRate.Items.AddRange(new object[] {
             "4800",
             "9600",
             "19200",
             "38400",
             "115200"});
-            this.cbBaudRate.FormattingEnabled = true;
             this.cbBaudRate.Location = new System.Drawing.Point(74, 69);
             this.cbBaudRate.Name = "cbBaudRate";
             this.cbBaudRate.Size = new System.Drawing.Size(81, 20);
@@ -102,11 +103,11 @@
             // 
             // cbStop
             // 
-            this.cbStop.AutoCompleteCustomSource.AddRange(new string[] {
+            this.cbStop.FormattingEnabled = true;
+            this.cbStop.Items.AddRange(new object[] {
             "1",
             "1.5",
             "2"});
-            this.cbStop.FormattingEnabled = true;
             this.cbStop.Location = new System.Drawing.Point(74, 107);
             this.cbStop.Name = "cbStop";
             this.cbStop.Size = new System.Drawing.Size(81, 20);
@@ -114,12 +115,12 @@
             // 
             // cbDataBits
             // 
-            this.cbDataBits.AutoCompleteCustomSource.AddRange(new string[] {
+            this.cbDataBits.FormattingEnabled = true;
+            this.cbDataBits.Items.AddRange(new object[] {
             "5",
             "6",
             "7",
             "8"});
-            this.cbDataBits.FormattingEnabled = true;
             this.cbDataBits.Location = new System.Drawing.Point(74, 150);
             this.cbDataBits.Name = "cbDataBits";
             this.cbDataBits.Size = new System.Drawing.Size(81, 20);
@@ -127,11 +128,11 @@
             // 
             // cbParity
             // 
-            this.cbParity.AutoCompleteCustomSource.AddRange(new string[] {
+            this.cbParity.FormattingEnabled = true;
+            this.cbParity.Items.AddRange(new object[] {
             "无",
             "奇校验",
             "偶校验"});
-            this.cbParity.FormattingEnabled = true;
             this.cbParity.Location = new System.Drawing.Point(74, 191);
             this.cbParity.Name = "cbParity";
             this.cbParity.Size = new System.Drawing.Size(81, 20);
@@ -206,6 +207,7 @@
             this.btnSave.TabIndex = 13;
             this.btnSave.Text = "保存参数";
             this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
             // ModbusDataAcquisition
             // 
@@ -215,6 +217,7 @@
             this.Controls.Add(this.communicationSetting);
             this.Name = "ModbusDataAcquisition";
             this.Text = "数据采集器";
+            this.Load += new System.EventHandler(this.ModbusDataAcquisition_Load);
             this.communicationSetting.ResumeLayout(false);
             this.communicationSetting.PerformLayout();
             this.ResumeLayout(false);
