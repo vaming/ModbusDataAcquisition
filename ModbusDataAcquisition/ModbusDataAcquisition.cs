@@ -24,8 +24,14 @@ namespace ModbusDataAcquisition
     {
         SerialPort serialPort = new SerialPort();
         ModbusSerialMaster master;
-        
-         
+        private float[] voltageArrayCH1 = new float[60];
+        private float[] voltageArrayCH2 = new float[60];
+        private float[] voltageArrayCH3 = new float[60];
+        private float[] voltageArrayCH4 = new float[60];
+        private float[] voltageArrayCH5 = new float[60];
+        private float[] voltageArrayCH6 = new float[60];
+
+
         System.Timers.Timer taskTimer = new System.Timers.Timer(1000);//定义一个1000ms的定时器
 
 
@@ -161,7 +167,12 @@ namespace ModbusDataAcquisition
             tbAddr.Text = "1";//预置地址
             tbTime.Text = "1000";//预置时间间隔
 
-            
+
+            //设置波形控件
+            voltageChart.ChartAreas[0].AxisY.Maximum = 6;
+            voltageChart.ChartAreas[0].AxisY.Minimum = -6;
+            voltageChart.ChartAreas[0].AxisY.Interval = 1;
+
             taskTimer.Elapsed += new System.Timers.ElapsedEventHandler(timerReadSCom);//定义定时执行的任务
             taskTimer.AutoReset = true;//不断执行
             taskTimer.Enabled = false;//关定时
@@ -369,7 +380,32 @@ namespace ModbusDataAcquisition
                 ushort[] valueTemp = master.ReadHoldingRegisters(slaveID, startAddress, numofPoints);
                 float[] voltageValue = dataProcess(valueTemp);           
                 string hexstr1 = string.Join(",", voltageValue);                
-                Console.WriteLine(DateTime.Now.ToString() + " =>" + hexstr1);              
+                Console.WriteLine(DateTime.Now.ToString() + " =>" + hexstr1);
+
+                voltageArrayCH1[voltageArrayCH1.Length - 1] = voltageValue[0];
+                voltageArrayCH2[voltageArrayCH2.Length - 1] = voltageValue[1];
+                voltageArrayCH3[voltageArrayCH3.Length - 1] = voltageValue[2];
+                voltageArrayCH4[voltageArrayCH4.Length - 1] = voltageValue[3];
+                voltageArrayCH5[voltageArrayCH5.Length - 1] = voltageValue[4];
+                voltageArrayCH6[voltageArrayCH6.Length - 1] = voltageValue[5];
+
+                Array.Copy(voltageArrayCH1, 1, voltageArrayCH1, 0, voltageArrayCH1.Length - 1);
+                Array.Copy(voltageArrayCH2, 1, voltageArrayCH2, 0, voltageArrayCH2.Length - 1);
+                Array.Copy(voltageArrayCH3, 1, voltageArrayCH3, 0, voltageArrayCH3.Length - 1);
+                Array.Copy(voltageArrayCH4, 1, voltageArrayCH4, 0, voltageArrayCH4.Length - 1);
+                Array.Copy(voltageArrayCH5, 1, voltageArrayCH5, 0, voltageArrayCH5.Length - 1);
+                Array.Copy(voltageArrayCH6, 1, voltageArrayCH6, 0, voltageArrayCH6.Length - 1);
+
+
+                if (voltageChart.IsHandleCreated)
+                {
+                    this.Invoke((MethodInvoker)delegate { UpdateVoltageChart(); });
+                }
+                else
+                {
+                    //......
+                }
+
 
             }
             catch (Exception exception)
@@ -386,6 +422,29 @@ namespace ModbusDataAcquisition
                 }
             }
         #endregion
+
+        private void UpdateVoltageChart()
+        {
+            voltageChart.Series["CH1"].Points.Clear();
+            voltageChart.Series["CH2"].Points.Clear();
+            voltageChart.Series["CH3"].Points.Clear();
+            voltageChart.Series["CH4"].Points.Clear();
+            voltageChart.Series["CH5"].Points.Clear();
+            voltageChart.Series["CH6"].Points.Clear();
+
+
+
+            for (int i = 0; i < voltageArrayCH1.Length - 1; ++i)
+            {
+                voltageChart.Series["CH1"].Points.AddY(voltageArrayCH1[i]);
+                voltageChart.Series["CH2"].Points.AddY(voltageArrayCH2[i]);
+                voltageChart.Series["CH3"].Points.AddY(voltageArrayCH3[i]);
+                voltageChart.Series["CH4"].Points.AddY(voltageArrayCH4[i]);
+                voltageChart.Series["CH5"].Points.AddY(voltageArrayCH5[i]);
+                voltageChart.Series["CH6"].Points.AddY(voltageArrayCH6[i]);
+            }
+        }
+
 
         #region 一些数据转换的函数
         /// <summary>

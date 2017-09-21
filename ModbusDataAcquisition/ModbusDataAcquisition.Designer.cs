@@ -28,8 +28,18 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea1 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.Series series2 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.Series series3 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.Series series4 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.Series series5 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.Series series6 = new System.Windows.Forms.DataVisualization.Charting.Series();
             this.communicationSetting = new System.Windows.Forms.GroupBox();
+            this.tbTime = new System.Windows.Forms.TextBox();
             this.btnSave = new System.Windows.Forms.Button();
+            this.label7 = new System.Windows.Forms.Label();
             this.tbAddr = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
@@ -43,9 +53,9 @@
             this.cbBaudRate = new System.Windows.Forms.ComboBox();
             this.cbSerial = new System.Windows.Forms.ComboBox();
             this.btnOpenCloseSCom = new System.Windows.Forms.Button();
-            this.tbTime = new System.Windows.Forms.TextBox();
-            this.label7 = new System.Windows.Forms.Label();
+            this.voltageChart = new System.Windows.Forms.DataVisualization.Charting.Chart();
             this.communicationSetting.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.voltageChart)).BeginInit();
             this.SuspendLayout();
             // 
             // communicationSetting
@@ -73,6 +83,13 @@
             this.communicationSetting.TabStop = false;
             this.communicationSetting.Text = "通信设置";
             // 
+            // tbTime
+            // 
+            this.tbTime.Location = new System.Drawing.Point(75, 275);
+            this.tbTime.Name = "tbTime";
+            this.tbTime.Size = new System.Drawing.Size(81, 21);
+            this.tbTime.TabIndex = 14;
+            // 
             // btnSave
             // 
             this.btnSave.Location = new System.Drawing.Point(90, 318);
@@ -82,6 +99,15 @@
             this.btnSave.Text = "保存参数";
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(7, 278);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(53, 24);
+            this.label7.TabIndex = 13;
+            this.label7.Text = "数据间隔\r\n（ms）";
             // 
             // tbAddr
             // 
@@ -213,33 +239,61 @@
             this.btnOpenCloseSCom.UseVisualStyleBackColor = true;
             this.btnOpenCloseSCom.Click += new System.EventHandler(this.btnOpenCloseSCom_Click);
             // 
-            // tbTime
+            // voltageChart
             // 
-            this.tbTime.Location = new System.Drawing.Point(75, 275);
-            this.tbTime.Name = "tbTime";
-            this.tbTime.Size = new System.Drawing.Size(81, 21);
-            this.tbTime.TabIndex = 14;
-            // 
-            // label7
-            // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(7, 278);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(53, 24);
-            this.label7.TabIndex = 13;
-            this.label7.Text = "数据间隔\r\n（ms）";
+            chartArea1.Name = "ChartArea1";
+            this.voltageChart.ChartAreas.Add(chartArea1);
+            legend1.Name = "Legend1";
+            this.voltageChart.Legends.Add(legend1);
+            this.voltageChart.Location = new System.Drawing.Point(211, 12);
+            this.voltageChart.Name = "voltageChart";
+            series1.ChartArea = "ChartArea1";
+            series1.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
+            series1.Legend = "Legend1";
+            series1.Name = "CH1";
+            series2.ChartArea = "ChartArea1";
+            series2.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
+            series2.Legend = "Legend1";
+            series2.Name = "CH2";
+            series3.ChartArea = "ChartArea1";
+            series3.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
+            series3.Legend = "Legend1";
+            series3.Name = "CH3";
+            series4.ChartArea = "ChartArea1";
+            series4.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
+            series4.Legend = "Legend1";
+            series4.Name = "CH4";
+            series5.ChartArea = "ChartArea1";
+            series5.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
+            series5.Legend = "Legend1";
+            series5.Name = "CH5";
+            series6.ChartArea = "ChartArea1";
+            series6.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
+            series6.Legend = "Legend1";
+            series6.Name = "CH6";
+            this.voltageChart.Series.Add(series1);
+            this.voltageChart.Series.Add(series2);
+            this.voltageChart.Series.Add(series3);
+            this.voltageChart.Series.Add(series4);
+            this.voltageChart.Series.Add(series5);
+            this.voltageChart.Series.Add(series6);
+            this.voltageChart.Size = new System.Drawing.Size(1217, 700);
+            this.voltageChart.TabIndex = 1;
+            this.voltageChart.Text = "电压监测值";
             // 
             // ModbusDataAcquisition
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1440, 724);
+            this.Controls.Add(this.voltageChart);
             this.Controls.Add(this.communicationSetting);
             this.Name = "ModbusDataAcquisition";
             this.Text = "数据采集器";
             this.Load += new System.EventHandler(this.ModbusDataAcquisition_Load);
             this.communicationSetting.ResumeLayout(false);
             this.communicationSetting.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.voltageChart)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -263,6 +317,7 @@
         private System.Windows.Forms.Button btnOpenCloseSCom;
         private System.Windows.Forms.TextBox tbTime;
         private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.DataVisualization.Charting.Chart voltageChart;
     }
 }
 
