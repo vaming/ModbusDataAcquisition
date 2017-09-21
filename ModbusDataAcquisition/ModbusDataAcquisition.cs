@@ -12,14 +12,22 @@ using System.IO.Ports;
 using INIFILE;
 using System.Runtime.InteropServices;
 using Modbus.Device;    //for modbus master
+using System.Timers;
+using ModbusRTU;
+
+
 
 namespace ModbusDataAcquisition
 {
-    
+
     public partial class ModbusDataAcquisition : Form
     {
         SerialPort serialPort = new SerialPort();
         ModbusSerialMaster master;
+         
+        System.Timers.Timer taskTimer = new System.Timers.Timer(1000);//定义一个1000ms的定时器
+
+
         public ModbusDataAcquisition()
         {
             InitializeComponent();
@@ -27,6 +35,8 @@ namespace ModbusDataAcquisition
 
         private void ModbusDataAcquisition_Load(object sender, EventArgs e)
         {
+            
+
             #region 串口的参数载入            
             INIFILE.Profile.LoadProfile();//加载所有
             // 预置波特率
@@ -146,6 +156,15 @@ namespace ModbusDataAcquisition
             serialPort.ReadBufferSize = 1024 * 1024 * 30;//设置串口缓存大小为30M
             serialPort.WriteBufferSize = 1024 * 1024 * 30;
             serialPort.Close();
+
+            tbAddr.Text = "1";//预置地址
+            tbTime.Text = "1000";//预置时间间隔
+
+            
+            taskTimer.Elapsed += new System.Timers.ElapsedEventHandler(timerReadSCom);//定义定时执行的任务
+            taskTimer.AutoReset = true;//不断执行
+            taskTimer.Enabled = false;//关定时
+
             #endregion
 
         }
@@ -199,9 +218,10 @@ namespace ModbusDataAcquisition
         }
         #endregion
 
-        #region 串口的打开
+        #region 串口的打开与关闭
         private void btnOpenCloseSCom_Click(object sender, EventArgs e)
         {
+            
             if (!serialPort.IsOpen)
             {
                 try
@@ -273,8 +293,21 @@ namespace ModbusDataAcquisition
 
                     master = ModbusSerialMaster.CreateRtu(serialPort);//创建RTU通信
                     master.Transport.Retries = 0;   //don't have to do retries
-                    master.Transport.ReadTimeout = 300; //milliseconds
+                    master.Transport.ReadTimeout = 30; //milliseconds
                     Console.WriteLine(DateTime.Now.ToString() + " =>Open " + serialPort.PortName + " sucessfully!");
+
+
+                    ///代码测试区
+                    ///
+                     ModbusRTU.ModbusRTU.ConvertHexToSingle();
+                   float x1= ModbusRTU.ModbusRTU.StringToFloat("3FCC81BF");
+                    string x2 = ModbusRTU.ModbusRTU.FloatToIntString(123.456f);
+                    byte[] y = new byte[] { 0x3F, 0xCC, 0x81, 0xBF };
+                    float x3 = ModbusRTU.ModbusRTU.ByteToFloat(y);
+
+                    //创建定时任务
+                    taskTimer.Interval = Convert.ToInt16(tbTime.Text);//重新设置间隔时间
+                    taskTimer.Enabled = true;//启用定时
 
 
                     btnOpenCloseSCom.Text = "关闭串口";
@@ -282,11 +315,20 @@ namespace ModbusDataAcquisition
                     //  taskTimer.Enabled = true;
                     //tsTips.Text = "串口打开成功";
 
+
+                    
+
                 }
                 catch (System.Exception ex)
                 {
                     MessageBox.Show("Error:" + ex.Message, "Error");
                     //tmSend.Enabled = false;
+                    cbSerial.Enabled = true;
+                    cbBaudRate.Enabled = true;
+                    cbDataBits.Enabled = true;
+                    cbStop.Enabled = true;
+                    cbParity.Enabled = true;
+                    taskTimer.Enabled = false;//关定时
                     return;
                 }
             }
@@ -300,6 +342,7 @@ namespace ModbusDataAcquisition
                 cbDataBits.Enabled = true;
                 cbStop.Enabled = true;
                 cbParity.Enabled = true;
+                taskTimer.Enabled = false;//先不启用定时
 
                 serialPort.Close();                    //关闭串口
                 btnOpenCloseSCom.Text = "打开串口";
@@ -310,5 +353,103 @@ namespace ModbusDataAcquisition
             }
         }
         #endregion
+
+
+        #region RTU数据的读取
+        void timerReadSCom(object sender, ElapsedEventArgs e)
+        {
+            //Console.WriteLine(DateTime.Now.ToString() + " => 定时器在运行" );
+            try
+            {
+                byte slaveID = Convert.ToByte(tbAddr.Text);
+                ushort startAddress = 20;
+                ushort numofPoints = 12;
+                List<ushort> listAI = new List<ushort>();//定义字符串list
+                //read AI(3xxxx)                        
+                ushort[] register = master.ReadInputRegisters(slaveID, startAddress, numofPoints);
+                Boolean[] re1 = master.ReadInputs(slaveID, startAddress, numofPoints);
+
+                for (int i = 0; i < numofPoints; i++)
+                {
+                    listAI[i] = register[i];
+                    Console.WriteLine(DateTime.Now.ToString() + " => AI " + i + "=" + listAI[i]);
+                    //If you need to show the value with other unit, you have to caculate the gain and offset
+                    //eq. 0 to 0kg, 32767 to 1000kg
+                    //0 (kg) = gain * 0 + offset
+                    //1000 (kg) = gain *32767 + offset
+                    //=> gain=1000/32767, offset=0
+                    //double value = (double)register[i] * 10.0 / 32767;
+                    //listAI[i].Text = value.ToString("0.00");
+                }
+            }
+            catch (Exception exception)
+            {
+                //Connection exception
+                //No response from server.
+                //The server maybe close the com port, or response timeout.
+                if (exception.Source.Equals("System"))
+                {
+                    Console.WriteLine(DateTime.Now.ToString() + " " + exception.Message);
+                }
+                //The server return error code.
+                //You can get the function code and exception code.
+                if (exception.Source.Equals("nModbusPC"))
+                {
+                    string str = exception.Message;
+                    int FunctionCode;
+                    string ExceptionCode;
+
+                    str = str.Remove(0, str.IndexOf("\r\n") + 17);
+                    FunctionCode = Convert.ToInt16(str.Remove(str.IndexOf("\r\n")));
+                    Console.WriteLine("Function Code: " + FunctionCode.ToString("X"));
+
+                    str = str.Remove(0, str.IndexOf("\r\n") + 17);
+                    ExceptionCode = str.Remove(str.IndexOf("-"));
+                    switch (ExceptionCode.Trim())
+                    {
+                        case "1":
+                            Console.WriteLine("Exception Code: " + ExceptionCode.Trim() + "----> Illegal function!");
+                            break;
+                        case "2":
+                            Console.WriteLine("Exception Code: " + ExceptionCode.Trim() + "----> Illegal data address!");
+                            break;
+                        case "3":
+                            Console.WriteLine("Exception Code: " + ExceptionCode.Trim() + "----> Illegal data value!");
+                            break;
+                        case "4":
+                            Console.WriteLine("Exception Code: " + ExceptionCode.Trim() + "----> Slave device failure!");
+                            break;
+                    }
+                    /*
+                       //Modbus exception codes definition                            
+                       * Code   * Name                                      * Meaning
+                         01       ILLEGAL FUNCTION                            The function code received in the query is not an allowable action for the server.
+                         
+                         02       ILLEGAL DATA ADDRESS                        The data addrdss received in the query is not an allowable address for the server.
+                         
+                         03       ILLEGAL DATA VALUE                          A value contained in the query data field is not an allowable value for the server.
+                           
+                         04       SLAVE DEVICE FAILURE                        An unrecoverable error occurred while the server attempting to perform the requested action.
+                             
+                         05       ACKNOWLEDGE                                 This response is returned to prevent a timeout error from occurring in the client (or master)
+                                                                              when the server (or slave) needs a long duration of time to process accepted request.
+                          
+                         06       SLAVE DEVICE BUSY                           The server (or slave) is engaged in processing a long–duration program command , and the
+                                                                              client (or master) should retransmit the message later when the server (or slave) is free.
+                             
+                         08       MEMORY PARITY ERROR                         The server (or slave) attempted to read record file, but detected a parity error in the memory.
+                             
+                         0A       GATEWAY PATH UNAVAILABLE                    The gateway is misconfigured or overloaded.
+                             
+                         0B       GATEWAY TARGET DEVICE FAILED TO RESPOND     No response was obtained from the target device. Usually means that the device is not present on the network.
+                     */
+                }
+            }
+
+
+
+            #endregion
+        }
+
     }
 }

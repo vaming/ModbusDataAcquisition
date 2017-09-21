@@ -51,6 +51,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ModbusRTU.cs" />
     <Compile Include="IniFile.cs" />
     <Compile Include="ModbusDataAcquisition.cs">
       <SubType>Form</SubType>
