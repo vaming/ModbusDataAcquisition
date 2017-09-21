@@ -11,11 +11,11 @@ using System.IO;
 using System.IO.Ports;
 using INIFILE;
 using System.Runtime.InteropServices;
-using Modbus.Device;    //for modbus master
+//using Modbus.Device;    //for modbus master
 using System.Timers;
-using ModbusRTU;
-
-
+//using ModbusRTU;
+using Modbus;
+using Modbus.Device;
 
 namespace ModbusDataAcquisition
 {
@@ -24,6 +24,7 @@ namespace ModbusDataAcquisition
     {
         SerialPort serialPort = new SerialPort();
         ModbusSerialMaster master;
+        
          
         System.Timers.Timer taskTimer = new System.Timers.Timer(1000);//定义一个1000ms的定时器
 
@@ -291,19 +292,20 @@ namespace ModbusDataAcquisition
 
                     serialPort.Open();     //打开串口
 
-                    master = ModbusSerialMaster.CreateRtu(serialPort);//创建RTU通信
-                    master.Transport.Retries = 0;   //don't have to do retries
-                    master.Transport.ReadTimeout = 30; //milliseconds
+                    // create modbus-rtu master
+                    master = ModbusSerialMaster.CreateRtu(serialPort);
+                    master.Transport.Retries = 0;//不重试
+                    master.Transport.ReadTimeout = 1000;//超时时间，单位ms
+
+                    //master = ModbusSerialMaster.CreateRtu(serialPort);//创建RTU通信
+                    //master.Transport.Retries = 0;   //don't have to do retries
+                    //master.Transport.ReadTimeout = 30; //milliseconds
                     Console.WriteLine(DateTime.Now.ToString() + " =>Open " + serialPort.PortName + " sucessfully!");
 
 
                     ///代码测试区
-                    ///
-                     ModbusRTU.ModbusRTU.ConvertHexToSingle();
-                   float x1= ModbusRTU.ModbusRTU.StringToFloat("3FCC81BF");
-                    string x2 = ModbusRTU.ModbusRTU.FloatToIntString(123.456f);
-                    byte[] y = new byte[] { 0x3F, 0xCC, 0x81, 0xBF };
-                    float x3 = ModbusRTU.ModbusRTU.ByteToFloat(y);
+
+                    
 
                     //创建定时任务
                     taskTimer.Interval = Convert.ToInt16(tbTime.Text);//重新设置间隔时间
@@ -358,29 +360,17 @@ namespace ModbusDataAcquisition
         #region RTU数据的读取
         void timerReadSCom(object sender, ElapsedEventArgs e)
         {
-            //Console.WriteLine(DateTime.Now.ToString() + " => 定时器在运行" );
+            
             try
             {
                 byte slaveID = Convert.ToByte(tbAddr.Text);
-                ushort startAddress = 20;
+                ushort startAddress = 32;//对应0x20H
                 ushort numofPoints = 12;
-                List<ushort> listAI = new List<ushort>();//定义字符串list
-                //read AI(3xxxx)                        
-                ushort[] register = master.ReadInputRegisters(slaveID, startAddress, numofPoints);
-                Boolean[] re1 = master.ReadInputs(slaveID, startAddress, numofPoints);
+                ushort[] valueTemp = master.ReadHoldingRegisters(slaveID, startAddress, numofPoints);
+                float[] voltageValue = dataProcess(valueTemp);           
+                string hexstr1 = string.Join(",", voltageValue);                
+                Console.WriteLine(DateTime.Now.ToString() + " =>" + hexstr1);              
 
-                for (int i = 0; i < numofPoints; i++)
-                {
-                    listAI[i] = register[i];
-                    Console.WriteLine(DateTime.Now.ToString() + " => AI " + i + "=" + listAI[i]);
-                    //If you need to show the value with other unit, you have to caculate the gain and offset
-                    //eq. 0 to 0kg, 32767 to 1000kg
-                    //0 (kg) = gain * 0 + offset
-                    //1000 (kg) = gain *32767 + offset
-                    //=> gain=1000/32767, offset=0
-                    //double value = (double)register[i] * 10.0 / 32767;
-                    //listAI[i].Text = value.ToString("0.00");
-                }
             }
             catch (Exception exception)
             {
@@ -391,65 +381,167 @@ namespace ModbusDataAcquisition
                 {
                     Console.WriteLine(DateTime.Now.ToString() + " " + exception.Message);
                 }
-                //The server return error code.
-                //You can get the function code and exception code.
-                if (exception.Source.Equals("nModbusPC"))
-                {
-                    string str = exception.Message;
-                    int FunctionCode;
-                    string ExceptionCode;
-
-                    str = str.Remove(0, str.IndexOf("\r\n") + 17);
-                    FunctionCode = Convert.ToInt16(str.Remove(str.IndexOf("\r\n")));
-                    Console.WriteLine("Function Code: " + FunctionCode.ToString("X"));
-
-                    str = str.Remove(0, str.IndexOf("\r\n") + 17);
-                    ExceptionCode = str.Remove(str.IndexOf("-"));
-                    switch (ExceptionCode.Trim())
-                    {
-                        case "1":
-                            Console.WriteLine("Exception Code: " + ExceptionCode.Trim() + "----> Illegal function!");
-                            break;
-                        case "2":
-                            Console.WriteLine("Exception Code: " + ExceptionCode.Trim() + "----> Illegal data address!");
-                            break;
-                        case "3":
-                            Console.WriteLine("Exception Code: " + ExceptionCode.Trim() + "----> Illegal data value!");
-                            break;
-                        case "4":
-                            Console.WriteLine("Exception Code: " + ExceptionCode.Trim() + "----> Slave device failure!");
-                            break;
-                    }
-                    /*
-                       //Modbus exception codes definition                            
-                       * Code   * Name                                      * Meaning
-                         01       ILLEGAL FUNCTION                            The function code received in the query is not an allowable action for the server.
-                         
-                         02       ILLEGAL DATA ADDRESS                        The data addrdss received in the query is not an allowable address for the server.
-                         
-                         03       ILLEGAL DATA VALUE                          A value contained in the query data field is not an allowable value for the server.
-                           
-                         04       SLAVE DEVICE FAILURE                        An unrecoverable error occurred while the server attempting to perform the requested action.
-                             
-                         05       ACKNOWLEDGE                                 This response is returned to prevent a timeout error from occurring in the client (or master)
-                                                                              when the server (or slave) needs a long duration of time to process accepted request.
-                          
-                         06       SLAVE DEVICE BUSY                           The server (or slave) is engaged in processing a long–duration program command , and the
-                                                                              client (or master) should retransmit the message later when the server (or slave) is free.
-                             
-                         08       MEMORY PARITY ERROR                         The server (or slave) attempted to read record file, but detected a parity error in the memory.
-                             
-                         0A       GATEWAY PATH UNAVAILABLE                    The gateway is misconfigured or overloaded.
-                             
-                         0B       GATEWAY TARGET DEVICE FAILED TO RESPOND     No response was obtained from the target device. Usually means that the device is not present on the network.
-                     */
+                
+               
                 }
             }
+        #endregion
+
+        #region 一些数据转换的函数
+        /// <summary>
+        /// 将二进制值转ASCII格式十六进制字符串
+        /// </summary>
+        /// <paramname="data">二进制值</param>
+        /// <paramname="length">定长度的二进制</param>
+        /// <returns>ASCII格式十六进制字符串</returns>
+        public static float[] dataProcess(ushort[] data)
+        {
+
+            byte[] byteArray1 = BitConverter.GetBytes(data[0]);
+            byte[] byteArray2 = BitConverter.GetBytes(data[1]);
+            byte[] byteArray3 = BitConverter.GetBytes(data[2]);
+            byte[] byteArray4 = BitConverter.GetBytes(data[3]);
+            byte[] byteArray5 = BitConverter.GetBytes(data[4]);
+            byte[] byteArray6 = BitConverter.GetBytes(data[5]);
+            byte[] byteArray7 = BitConverter.GetBytes(data[6]);
+            byte[] byteArray8 = BitConverter.GetBytes(data[7]);
+            byte[] byteArray9 = BitConverter.GetBytes(data[8]);
+            byte[] byteArray10 = BitConverter.GetBytes(data[9]);
+            byte[] byteArray11 = BitConverter.GetBytes(data[10]);
+            byte[] byteArray12 = BitConverter.GetBytes(data[11]);
 
 
+            byte[] intBufferCH1 = new byte[4];
+            byte[] intBufferCH2 = new byte[4];
+            byte[] intBufferCH3 = new byte[4];
+            byte[] intBufferCH4 = new byte[4];
+            byte[] intBufferCH5 = new byte[4];
+            byte[] intBufferCH6 = new byte[4];
 
-            #endregion
+            intBufferCH1[0] = byteArray1[1];
+            intBufferCH1[1] = byteArray1[0];
+            intBufferCH1[2] = byteArray2[1];
+            intBufferCH1[3] = byteArray2[0];
+            intBufferCH2[0] = byteArray3[1];
+            intBufferCH2[1] = byteArray3[0];
+            intBufferCH2[2] = byteArray4[1];
+            intBufferCH2[3] = byteArray4[0];
+            intBufferCH3[0] = byteArray5[1];
+            intBufferCH3[1] = byteArray5[0];
+            intBufferCH3[2] = byteArray6[1];
+            intBufferCH3[3] = byteArray6[0];
+            intBufferCH4[0] = byteArray7[1];
+            intBufferCH4[1] = byteArray7[0];
+            intBufferCH4[2] = byteArray8[1];
+            intBufferCH4[3] = byteArray8[0];
+            intBufferCH5[0] = byteArray9[1];
+            intBufferCH5[1] = byteArray9[0];
+            intBufferCH5[2] = byteArray10[1];
+            intBufferCH5[3] = byteArray10[0];
+            intBufferCH6[0] = byteArray11[1];
+            intBufferCH6[1] = byteArray11[0];
+            intBufferCH6[2] = byteArray12[1];
+            intBufferCH6[3] = byteArray12[0];
+
+            float CH1 = ByteToFloat(intBufferCH1);
+            float CH2 = ByteToFloat(intBufferCH2);
+            float CH3 = ByteToFloat(intBufferCH3);
+            float CH4 = ByteToFloat(intBufferCH4);
+            float CH5 = ByteToFloat(intBufferCH5);
+            float CH6 = ByteToFloat(intBufferCH6);
+            float[] result = { CH1, CH2, CH3, CH4, CH5, CH6 };            
+            return result;
         }
 
+
+        /// <summary>
+        /// 将二进制值转ASCII格式十六进制字符串
+        /// </summary>
+        /// <paramname="data">二进制值</param>
+        /// <paramname="length">定长度的二进制</param>
+        /// <returns>ASCII格式十六进制字符串</returns>
+        public static string toHexString(int data, int length)
+        {
+            string result = "";
+            if (data > 0)
+                result = Convert.ToString(data, 16).ToUpper();
+            if (result.Length < length)
+            {
+                // 位数不够补0
+                StringBuilder msg = new StringBuilder(0);
+                msg.Length = 0;
+                msg.Append(result);
+                for (; msg.Length < length; msg.Insert(0, "0")) ;
+                result = msg.ToString();
+            }
+            return result;
+        }
+        ///<summary>
+        /// 将浮点数转ASCII格式十六进制字符串（符合IEEE-754标准（32））
+        /// </summary>
+        /// <paramname="data">浮点数值</param>
+        /// <returns>十六进制字符串</returns>
+        public static string FloatToIntString(float data)
+        {
+            byte[] intBuffer = BitConverter.GetBytes(data);
+            StringBuilder stringBuffer = new StringBuilder(0);
+            for (int i = 0; i < intBuffer.Length; i++)
+            {
+                stringBuffer.Insert(0, toHexString(intBuffer[i] & 0xff, 2));
+            }
+            return stringBuffer.ToString();
+        }
+
+        /// <summary>
+        /// 将ASCII格式十六进制字符串转浮点数（符合IEEE-754标准（32））
+        /// </summary>
+        /// <param name="data">16进制字符串</param>
+        /// <returns></returns>
+        public static float StringToFloat(String data)
+        {
+            if (data.Length < 8 || data.Length > 8)
+            {
+                //throw new NotEnoughDataInBufferException(data.length(), 8);
+                return 0;
+            }
+            else
+            {
+                byte[] intBuffer = new byte[4];
+                // 将16进制串按字节逆序化（一个字节2个ASCII码）
+                for (int i = 0; i < 4; i++)
+                {
+                    intBuffer[i] = Convert.ToByte(data.Substring((3 - i) * 2, 2), 16);
+                }
+                return BitConverter.ToSingle(intBuffer, 0);
+            }
+        }
+        /// <summary>
+        /// 将byte数组转为浮点数
+        /// </summary>
+        /// <param name="bResponse">byte数组</param>
+        /// <returns></returns>
+        public static float ByteToFloat(byte[] bResponse)
+        {
+            if (bResponse.Length < 4 || bResponse.Length > 4)
+            {
+                //throw new NotEnoughDataInBufferException(data.length(), 8);
+                return 0;
+            }
+            else
+            {
+                byte[] intBuffer = new byte[4];
+                //将byte数组的位置调换
+                intBuffer[0] = bResponse[3];
+                intBuffer[1] = bResponse[2];
+                intBuffer[2] = bResponse[1];
+                intBuffer[3] = bResponse[0];
+                return BitConverter.ToSingle(intBuffer, 0);
+                
+            }
+        }
+#endregion 数据转换结束
+
     }
-}
+
+    }
+//}
